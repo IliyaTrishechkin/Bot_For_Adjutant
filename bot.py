@@ -3,6 +3,9 @@ import json
 import string
 import secrets
 import logging
+import time
+import calendar
+from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 from telegram.error import NetworkError, TelegramError
@@ -100,7 +103,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "Student" in status:
         kb = [  
             [InlineKeyboardButton("Переглянути минуле дз", callback_data="Student|homework")],
-            [InlineKeyboardButton("Проекти та позакласні завдання", callback_data="Student|project")]
+            [InlineKeyboardButton("Проекти та позакласні завдання", callback_data="Student|project")],
+            [InlineKeyboardButton("Розклад", callback_data="Student|schedule")]
         ]
         text = "Привіт, учень,\nя допоможу тобі у вирішенні твоїх справ."
     if "Adjutant" in status:
@@ -108,7 +112,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "Привіт, ад'ютант,\nя допоможу тобі у вирішенні твоїх справ."
     if "Clerk" in status:
         kb += []
-        text = "Привіт, писарь,\nя допоможу тобі у вирішенні твоїх справ."
+        text = "Привіт, писар,\nя допоможу тобі у вирішенні твоїх справ."
     if "Teacher" in status:
         kb = []
         text = "Привіт, Вчитель,\nя допоможу тобі у вирішенні твоїх справ."
@@ -139,15 +143,15 @@ async def on_registration_menu_pressed(update: Update, context: ContextTypes.DEF
             return ConversationHandler.END
         case "reg_Clerk":
             context.user_data["status"] = "Clerk"
-            await q.edit_message_text("Введіть пароль для цієї посади.\nЗвернітся до адміна щоб отрімати пароль.")
+            await q.edit_message_text("Введіть пароль для цієї посади.\nЗвернітся до адміна щоб отримати пароль.")
             return REGISTRATION
         case "reg_Ajutant":
             context.user_data["status"] = "Adjutant"
-            await q.edit_message_text("Введіть пароль для цієї посади.\nЗвернітся до адміна щоб отрімати пароль.")
+            await q.edit_message_text("Введіть пароль для цієї посади.\nЗвернітся до адміна щоб отримати пароль.")
             return REGISTRATION
         case "reg_Teacher":
             context.user_data["status"] = "Teacher"
-            await q.edit_message_text("Введіть пароль для цієї посади.\nЗвернітся до адміна щоб отрімати пароль.")
+            await q.edit_message_text("Введіть пароль для цієї посади.\nЗвернітся до адміна щоб отримати пароль.")
             return REGISTRATION
 
 
@@ -157,7 +161,29 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cmd, arg = q.data.split("|")
     match cmd:
         case "Student":
-            pass
+            match arg:
+                case "homework":
+                    await homework(update, context)
+                case "project":
+                    await q.edit_message_text("Ось твої проекти та позакласні завдання:")
+                case "schedule":
+                    with open("schedule.json", "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                case "today_homework":
+                    pass
+                case "tomorrow_homework":
+                    pass
+                case "project":
+                    pass
+                case "extracurricular_tasks":
+                    pass
+                case "Back":
+                    kb = [  
+                        [InlineKeyboardButton("Переглянути минуле дз", callback_data="Student|homework")],
+                        [InlineKeyboardButton("Проекти та позакласні завдання", callback_data="Student|project")],
+                        [InlineKeyboardButton("Розклад", callback_data="Student|schedule")]
+                    ]
+                    text = "Привіт, учень,\nя допоможу тобі у вирішенні твоїх справ."
         case "Clerk":
             pass
         case "Adjutant":
@@ -166,6 +192,35 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         case "Admin":
             pass
+
+
+
+async def homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    shkb = [  
+            [InlineKeyboardButton("Сьогоднішні д/з", callback_data="Student|today_homework")],
+            [InlineKeyboardButton("Д/з на завтра", callback_data="Student|tomorrow_homework")],
+            [InlineKeyboardButton("Назад у меню", callback_data="Student|Back")]
+        ]
+    
+    await update.callback_query.edit_message_text(
+        text="Обери яке домашнє завдання хочеш подивитись",
+        reply_markup=InlineKeyboardMarkup(shkb)
+    )
+
+
+
+
+async def project(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    spkb = [  
+            [InlineKeyboardButton("Проекти", callback_data="Student|project")],
+            [InlineKeyboardButton("Позакласні завдання", callback_data="Student|extracurricular_tasks")],
+            [InlineKeyboardButton("Назад у меню", callback_data="Student|Back")]
+        ]
+    
+    await update.callback_query.edit_message_text(
+        text="Обери яке домашнє завдання хочеш подивитись",
+        reply_markup=InlineKeyboardMarkup(spkb)
+    )
 
 
 
