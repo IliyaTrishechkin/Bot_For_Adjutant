@@ -38,26 +38,36 @@ def IS_password():
     up_date()
 
 
+def get_status(uid):
+    statuses = []
+    for key, value in DATA_USER["Users"].items():
+        if not value:
+            continue
+        if str(uid) in value:
+            statuses.append(key)
+    return statuses
+
 
 async def registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    kb = [  [InlineKeyboardButton("Учень", callback_data="reg_Students")],
-            [InlineKeyboardButton("Писарь", callback_data="reg_Clerc")],
+    kb = [  [InlineKeyboardButton("Учень", callback_data="reg_Student")],
+            [InlineKeyboardButton("Писарь", callback_data="reg_Clerk")],
             [InlineKeyboardButton("Ад'ютант", callback_data="reg_Ajutant")],
-            [InlineKeyboardButton("Вчитель", callback_data="reg_Teachers")]
+            [InlineKeyboardButton("Вчитель", callback_data="reg_Teacher")]
         ]
     await update.message.reply_text("Доброго дня,\nоберіть ваше становище.", reply_markup=InlineKeyboardMarkup(kb))
 
 
 async def password(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
-    if text == DATA_USER["PASSWORD"][context.user_data.get("status", "—")]:
+    status = context.user_data.get("status", "—")
+    if text == DATA_USER["PASSWORD"][status]:
         with open('user.json', 'r', encoding='utf-8') as f:
             ud = json.load(f)
-        if context.user_data.get("status", "—") == "Teachers":
-            ud["Users"][context.user_data.get("status", "—")].append(str(update.effective_user.id))
+        if status == "Teachers":
+            ud["Users"][status].append(str(update.effective_user.id))
         else:
-            ud["Users"][context.user_data.get("status", "—")] = str(update.effective_user.id)
-
+            ud["Users"][status] = [str(update.effective_user.id)]
+            ud["PASSWORD"][status] = generate_password()
         with open('user.json', 'w', encoding='utf-8') as f:
             json.dump(ud, f, ensure_ascii=False, indent=4)
         await update.message.reply_text("Ви зареестровані. Визвіть /start")
@@ -72,40 +82,51 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid = str(update.effective_user.id)
     else:
         uid = str(update.effective_chat.id)
-        if not uid in DATA_USER["Users"]["Students"]:
+        if not uid in DATA_USER["Users"]["Student"]:
             with open('user.json', 'r', encoding='utf-8') as f:
                 ud = json.load(f)
 
-            ud["Users"]["Students"].append(str(uid))
+            ud["Users"]["Student"].append(str(uid))
 
             with open('id_users.json', 'w', encoding='utf-8') as f:
                 json.dump(ud, f, ensure_ascii=False, indent=4)
             up_date()
     
-    if not uid in DATA_USER["Users"]["Students"] and not uid in DATA_USER["Users"]["Teachers"]:
+    if not uid in DATA_USER["Users"]["Student"] and not uid in DATA_USER["Users"]["Teacher"]:
         await registration(update, context)  
         return
-
-    kb = [  
-            [InlineKeyboardButton("Переглянути минуле дз", callback_data="homework")],
-            [InlineKeyboardButton("Проекти та позакласні завдання", callback_data="project")]
+    
+    status = get_status(uid)
+    if "Student" in status:
+        kb = [  
+            [InlineKeyboardButton("Переглянути минуле дз", callback_data="Student|homework")],
+            [InlineKeyboardButton("Проекти та позакласні завдання", callback_data="Student|project")]
         ]
-    await update.message.reply_text("Привіт учень,\nя допоможу тобі у вирішенні твоїх справ.", reply_markup=InlineKeyboardMarkup(kb))
+        text = "Привіт, учень,\nя допоможу тобі у вирішенні твоїх справ."
+    if "Adjutant" in status:
+        kb += []
+        text = "Привіт, ад'ютант,\nя допоможу тобі у вирішенні твоїх справ."
+    if "Clerk" in status:
+        kb += []
+        text = "Привіт, писарь,\nя допоможу тобі у вирішенні твоїх справ."
+    if "Teacher" in status:
+        kb = []
+        text = "Привіт, Вчитель,\nя допоможу тобі у вирішенні твоїх справ."
+
+    await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(kb))
 
 
 async def on_registration_menu_pressed(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     user_id = str(update.effective_user.id)
-    with open('user.json', 'r', encoding='utf-8') as f:
-        ud = json.load(f)
     
-    if q.data != "reg_Teachers":
-        if not user_id in ud["Users"]["Students"]:
+    if q.data != "reg_Teacher":
+        if not user_id in DATA_USER["Users"]["Student"]:
             with open('user.json', 'r', encoding='utf-8') as f:
                 ud = json.load(f)
 
-            ud["Users"]["Students"].append(str(user_id))
+            ud["Users"]["Student"].append(str(user_id))
 
             with open('user.json', 'w', encoding='utf-8') as f:
                 json.dump(ud, f, ensure_ascii=False, indent=4)
@@ -113,21 +134,41 @@ async def on_registration_menu_pressed(update: Update, context: ContextTypes.DEF
             up_date()
     
     match q.data:
-        case "reg_Students":
+        case "reg_Student":
             await q.edit_message_text("Ви успішно зарееструвались як учень.")
             return ConversationHandler.END
-        case "reg_Clerc":
-            context.user_data["status"] = "Clerc"
+        case "reg_Clerk":
+            context.user_data["status"] = "Clerk"
             await q.edit_message_text("Введіть пароль для цієї посади.\nЗвернітся до адміна щоб отрімати пароль.")
             return REGISTRATION
         case "reg_Ajutant":
             context.user_data["status"] = "Adjutant"
             await q.edit_message_text("Введіть пароль для цієї посади.\nЗвернітся до адміна щоб отрімати пароль.")
             return REGISTRATION
-        case "reg_Teachers":
-            context.user_data["status"] = "Teachers"
+        case "reg_Teacher":
+            context.user_data["status"] = "Teacher"
             await q.edit_message_text("Введіть пароль для цієї посади.\nЗвернітся до адміна щоб отрімати пароль.")
             return REGISTRATION
+
+
+async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    cmd, arg = q.data.split("|")
+    match cmd:
+        case "Student":
+            pass
+        case "Clerk":
+            pass
+        case "Adjutant":
+            pass
+        case "Teacher":
+            pass
+        case "Admin":
+            pass
+
+
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

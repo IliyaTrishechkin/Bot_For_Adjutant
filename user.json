@@ -1,17 +1,20 @@
 {
     "PASSWORD": {
-        "Teachers": "nXvxz5F2t5^Y",
-        "Adjutant": "LDHqSTQYzbtB",
-        "Clerc": "RUg&sywhp7R0"
+        "Teacher": "nXvxz5F2t5^Y",
+        "Adjutant": "%C9vLv!bcIPS",
+        "Clerk": "IK##X&Z&wBHh"
     },
     "Users": {
-        "Students": [
+        "Student": [
+            "0000000000",
+            "5454543144"
+        ],
+        "Teacher": [
             "0000000000"
         ],
-        "Teachers": [
-            "0000000000"
+        "Adjutant": [
+            "5454543144"
         ],
-        "Adjutant": null,
-        "Clerc": null
+        "Clerk": null
     }
 }
