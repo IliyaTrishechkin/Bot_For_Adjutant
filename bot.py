@@ -14,7 +14,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Callb
 
 
 load_dotenv(Path(__file__).parent / 'data.env', encoding='UTF-8')
-TOKEN = "8448978111:AAFnd7ISDJRxfhP4uQE7rNdQ3HuDE8GK97I" #було os.getenv("8448978111:AAFnd7ISDJRxfhP4uQE7rNdQ3HuDE8GK97I")
+TOKEN = "8448978111:AAFnd7ISDJRxfhP4uQE7rNdQ3HuDE8GK97I"
 ADMIN_ID = os.getenv("ADMIN_ID")
 DATA_USER = json.loads((Path(__file__).parent / 'user.json').read_text(encoding='utf-8'))
 REGISTRATION, PASS = range(100, 102)
@@ -142,7 +142,7 @@ async def on_registration_menu_pressed(update: Update, context: ContextTypes.DEF
     
     match q.data:
         case "reg_Student":
-            await q.edit_message_text("Ви успішно зарееструвались як учень.")
+            await q.edit_message_text("Ви успішно зарееструвались як учень. Напишіть /start")
             return ConversationHandler.END
         case "reg_Clerk":
             context.user_data["status"] = "Clerk"
@@ -183,9 +183,15 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 case "Back":
                     kb = [  
                         [InlineKeyboardButton("Переглянути минуле дз", callback_data="Student|homework")],
-                        [InlineKeyboardButton("Проекти та позакласні завдання", callback_data="Student|project")]
+                        [InlineKeyboardButton("Проекти та позакласні завдання", callback_data="Student|project")],
+                        [InlineKeyboardButton("Розклад", callback_data="Student|schedule")] 
                     ]
                     text = "Привіт, учень,\nя допоможу тобі у вирішенні твоїх справ."
+
+                    await update.message.reply_text(
+                        text,
+                        reply_markup=InlineKeyboardMarkup(kb)
+                    )
         case "Clerk":
             pass
         case "Adjutant":
