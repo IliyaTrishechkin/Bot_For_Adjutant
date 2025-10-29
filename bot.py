@@ -4,9 +4,7 @@ import json
 import string
 import secrets
 import logging
-import time
-import calendar
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 from telegram.error import NetworkError, TelegramError
@@ -206,10 +204,9 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         parse_mode="Markdown"
                     )
                 case "today_homework":
-                    #await homework_today(update, context)
-                    pass
+                    await homework_today(update, context)
                 case "tomorrow_homework":
-                    #await homework_tomorrow(update, context)
+                    await homework_tomorrow(update, context)
                     pass
                 case "project":
                     pass
@@ -265,9 +262,58 @@ async def homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     
+async def homework_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    # Визначаємо сьогоднішній день у форматі JSON
+    day_map = {
+        0: "monday",
+        1: "tuesday",
+        2: "wednesday",
+        3: "thursday",
+        4: "friday"
+    }
+
+    today_index = datetime.today().weekday()  # 0 = понеділок, 4 = п’ятниця
+    day_key = day_map.get(today_index)
+    
+    with open("hometask.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    text = f"*Домашнє завдання на сьогодні:*\n\n"
+    for lesson in data[day_key]:
+        homework = lesson["д/з"] if lesson["д/з"] else "немає"
+        text += f"{lesson['предмет']}: {homework}\n"
+
+    await q.message.edit_text(text, parse_mode="Markdown")
 
 
+async def homework_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
 
+    # Визначаємо сьогоднішній день у форматі JSON
+    day_map = {
+        0: "monday",
+        1: "tuesday",
+        2: "wednesday",
+        3: "thursday",
+        4: "friday"
+    }
+
+    today_index = datetime.today().weekday()+1  # 0 = понеділок, 4 = п’ятниця
+    day_key = day_map.get(today_index)
+    
+    with open("hometask.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    text = f"*Домашнє завдання на завтра:*\n\n"
+    for lesson in data[day_key]:
+        homework = lesson["д/з"] if lesson["д/з"] else "немає"
+        text += f"{lesson['предмет']}: {homework}\n"
+
+    await q.message.edit_text(text, parse_mode="Markdown")
 
 
 async def project(update: Update, context: ContextTypes.DEFAULT_TYPE):
