@@ -1,4 +1,3 @@
-
 import os
 import json
 import string
@@ -18,6 +17,8 @@ ADMIN_ID = os.getenv("ADMIN_ID")
 DATA_USER = json.loads((Path(__file__).parent / 'user.json').read_text(encoding='utf-8'))
 REGISTRATION, PASS = range(100, 102)
 HOMEWORK, SUBJECT, INPUT_HOMEWORK = range(3)
+INPUT_PROJECT, INPUT_DATE = range(2)
+EX_TASK_CONTENT, EX_TASK_DATE = range(2)
 
 
 
@@ -184,7 +185,7 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 case "homework":
                     await homework(update, context)
                 case "project_1":
-                    await q.message.edit_text("Ось твої проекти та позакласні завдання:")
+                    await project_1(update, context)
                 case "schedule":
                     with open("schedule.json", "r", encoding="utf-8") as f:
                         data = json.load(f)
@@ -208,10 +209,10 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 case "tomorrow_homework":
                     await homework_tomorrow(update, context)
                     pass
-                case "project":
-                    pass
+                case "project_call":
+                    await show_projects(update, context)
                 case "extracurricular_tasks":
-                    pass
+                    await show_ec(update, context)
                 case "Back":
                     kb = [  
                         [InlineKeyboardButton("Переглянути минуле дз", callback_data="Student|homework")],
@@ -227,6 +228,8 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             match arg:
                 case "homework":
                     return await start_create_homework(update, context)
+                case "project":
+                    await project(update, context)
                 case "Back":
                     kb = [
                         [InlineKeyboardButton("Написати д/з", callback_data="Clerk|homework")],
@@ -246,6 +249,50 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         case "Admin":
             pass
+
+
+async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    with open("project_and_extracurricular_task.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    projects = data.get("Проекти", [])
+    
+    if not projects:
+        await q.message.edit_text("Немає проєктів.")
+        return
+
+    text = "📘 *Список проєктів:*\n\n"
+    for i, proj in enumerate(projects, start=1):
+        text += f"{i}. {proj['зміст']}\n До {proj['дата']}\n\n"
+
+    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
+    await q.message.edit_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(kb))
+
+
+async def show_ec(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    with open("project_and_extracurricular_task.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    projects = data.get("Позакласні завдання", [])
+    
+    if not projects:
+        await q.message.edit_text("Немає завданнь.")
+        return
+
+    text = "📘 *Список завданнь:*\n\n"
+    for i, proj in enumerate(projects, start=1):
+        text += f"{i}. {proj['зміст']}\n До {proj['дата']}\n\n"
+
+    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
+    await q.message.edit_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(kb))
+
+
 
 
 
@@ -316,9 +363,9 @@ async def homework_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.message.edit_text(text, parse_mode="Markdown")
 
 
-async def project(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def project_1(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb = [  
-        [InlineKeyboardButton("Проекти", callback_data="Student|project")],
+        [InlineKeyboardButton("Проекти", callback_data="Student|project_call")],
         [InlineKeyboardButton("Позакласні завдання", callback_data="Student|extracurricular_tasks")],
         [InlineKeyboardButton("Назад у меню", callback_data="Student|Back")]
     ]
@@ -329,21 +376,20 @@ async def project(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def create_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    kb = [
-        [InlineKeyboardButton("Понеділок", callback_data="Clerk|monday")],
-        [InlineKeyboardButton("Вівторок", callback_data="Clerk|tuesday")],
-        [InlineKeyboardButton("Середа", callback_data="Clerk|wednesday")],
-        [InlineKeyboardButton("Четверг", callback_data="Clerk|thursday")],
-        [InlineKeyboardButton("П'ятниця", callback_data="Clerk|friday")],
-        [InlineKeyboardButton("Назад", callback_data="Clerk|Back")]
+async def project(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    kb = [  
+        [InlineKeyboardButton("Написати завдання з проекту", callback_data="add_project")],
+        [InlineKeyboardButton("Створити позакласне завдання", callback_data="extracurricular_tasks")],
+        [InlineKeyboardButton("Назад", callback_data="Student|Back")]
     ]
-
+    
     await update.callback_query.edit_message_text(
-        text="Оберіть день: ",
+        text="Обери що саме хочеш створити",
         reply_markup=InlineKeyboardMarkup(kb)
     )
 
+
+                 #### HOMEWORK #######
 
 
 async def start_create_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -433,6 +479,87 @@ async def input_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
+             #### PROJECT #######
+
+
+
+
+async def get_project(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    await q.message.reply_text("Напишіть завдання яке хочете додати:")
+    return INPUT_PROJECT  # чекаємо текст
+
+
+async def create_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # зберігаємо текст завдання
+    context.user_data["new_project"] = update.message.text
+    await update.message.reply_text("Напишіть дату до якої треба здати проект:")
+    return INPUT_DATE
+
+
+async def input_project(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # зберігаємо дату
+    context.user_data["new_date"] = update.message.text
+
+    with open("project_and_extracurricular_task.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    data["Проекти"].append({
+        "зміст": context.user_data["new_project"],
+        "дата": context.user_data["new_date"]
+    })
+
+    with open("project_and_extracurricular_task.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    await update.message.reply_text("✅ Створено новий проект!")
+    return ConversationHandler.END
+
+
+
+          #### ПОЗАКЛАСНІ ЗАВДАННЯ ####
+
+
+async def get_extracurricular_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Початок конверсейшена: користувач вводить зміст завдання"""
+    q = update.callback_query
+    await q.answer()
+    await q.message.reply_text("Напишіть зміст позакласного завдання:")
+    return EX_TASK_CONTENT
+
+async def input_ex_task_content(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Зберігаємо зміст завдання і просимо дату"""
+    context.user_data["new_ex_task"] = update.message.text
+    await update.message.reply_text("Напишіть дату, до якої потрібно здати завдання:")
+    return EX_TASK_DATE
+
+async def input_ex_task_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Зберігаємо дату і додаємо завдання у JSON"""
+    context.user_data["new_ex_task_date"] = update.message.text
+
+    # Читаємо JSON
+    with open("project_and_extracurricular_task.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Додаємо нове позакласне завдання
+    data["Позакласні завдання"].append({
+        "зміст": context.user_data["new_ex_task"],
+        "дата": context.user_data["new_ex_task_date"]
+    })
+
+    # Записуємо назад у файл
+    with open("project_and_extracurricular_task.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    await update.message.reply_text("✅ Позакласне завдання створено!")
+    return ConversationHandler.END
+
+
+
+
+
+
 
 
 
@@ -453,6 +580,26 @@ if __name__ == '__main__':
     )
 
 
+    conv_homework_2 = ConversationHandler(
+        entry_points=[CallbackQueryHandler(get_project, pattern="^add_project$")],
+        states={
+            INPUT_PROJECT: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_date)],
+            INPUT_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, input_project)]
+        },
+        fallbacks=[]
+    )
+
+
+    conv_ex_task = ConversationHandler(
+        entry_points=[CallbackQueryHandler(get_extracurricular_task, pattern="^extracurricular_tasks$")],
+        states={
+            EX_TASK_CONTENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, input_ex_task_content)],
+            EX_TASK_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, input_ex_task_date)],
+        },
+        fallbacks=[]
+    )
+
+
 
     conv_registration = ConversationHandler(
         entry_points = [CallbackQueryHandler(on_registration_menu_pressed, pattern="^reg_")],
@@ -465,6 +612,8 @@ if __name__ == '__main__':
 
     app.add_handler(conv_registration)
     app.add_handler(conv_homework)  # Додавання ConversationHandler для ДЗ
+    app.add_handler(conv_homework_2)
+    app.add_handler(conv_ex_task)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("registration", registration))
     app.add_handler(CallbackQueryHandler(on_registration_menu_pressed, pattern="^reg_"))
