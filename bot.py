@@ -52,9 +52,6 @@ def get_status(uid):
     return statuses
 
 
-
-
-
 async def registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb = [  [InlineKeyboardButton("Учень", callback_data="reg_Student")],
             [InlineKeyboardButton("Писарь", callback_data="reg_Clerk")],
@@ -187,28 +184,13 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 case "project_1":
                     await project_1(update, context)
                 case "schedule":
-                    with open("schedule.json", "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                        
-                    text = ""
-                    for day, lessons in data.items():
-                        text += f"*{day}:*\n"
-                        for lesson in lessons:
-                            text += f"Урок {lesson['урок']}: {lesson['предмет']}\n"
-                        text += "\n"
-                    
-                    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
-
-                    await q.message.edit_text(
-                        text,
-                        reply_markup=InlineKeyboardMarkup(kb),
-                        parse_mode="Markdown"
-                    )
+                    await vuvid_schedule(update, context)
                 case "today_homework":
                     await homework_today(update, context)
                 case "tomorrow_homework":
                     await homework_tomorrow(update, context)
-                    pass
+                case "a_homework":
+                    await a_homework(update, context)
                 case "project_call":
                     await show_projects(update, context)
                 case "extracurricular_tasks":
@@ -249,6 +231,54 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         case "Admin":
             pass
+
+
+async def vuvid_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    with open("schedule.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+                        
+    text = ""
+    for day, lessons in data.items():
+        text += f"*{day}:*\n"
+        for lesson in lessons:
+            text += f"Урок {lesson['урок']}: {lesson['предмет']}\n"
+        text += "\n"
+                    
+    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
+
+    await q.message.edit_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(kb),
+        parse_mode="Markdown"
+    )
+
+
+async def a_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    with open("hometask.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    text = ""
+    for day, lessons in data.items():
+        text += f"*{day.capitalize()}:*\n"
+        for lesson in lessons:
+            homework = lesson["д/з"] if lesson["д/з"] else "немає"
+            text += f"Урок {lesson['предмет']}: {homework}\n"
+        text += "\n"
+
+    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
+
+    await q.message.edit_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(kb),
+        parse_mode="Markdown"
+    )
+
 
 
 async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -300,6 +330,7 @@ async def homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb = [  
         [InlineKeyboardButton("Сьогоднішні д/з", callback_data="Student|today_homework")],
         [InlineKeyboardButton("Д/з на завтра", callback_data="Student|tomorrow_homework")],
+        [InlineKeyboardButton("Подивитися все д/з", callback_data="Student|a_homework")],
         [InlineKeyboardButton("Назад", callback_data="Student|Back")]
     ]
     
