@@ -2,19 +2,22 @@
     "PASSWORD": {
         "Teacher": "nXvxz5F2t5^Y",
         "Adjutant": "%C9vLv!bcIPS",
-        "Clerk": "IK##X&Z&wBHh"
+        "Clerk": "%4%dw1D%h4Ul"
     },
     "Users": {
         "Student": [
             "0000000000",
-            "5454543144"
+            "5454543144",
+            "1229185667"
         ],
         "Teacher": [
             "0000000000"
         ],
         "Adjutant": [
-            "5454543144"
+            null
         ],
-        "Clerk": null
+        "Clerk": [
+            "1229185667"
+        ]
     }
 }
