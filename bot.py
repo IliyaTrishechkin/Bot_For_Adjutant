@@ -504,9 +504,6 @@ async def create_homework_3(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def input_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
     day = context.user_data.get("day")
     subject = context.user_data.get("subject")
     new_homework = update.message.text
@@ -521,9 +518,7 @@ async def input_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     with open("hometask.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-
-    kb = back_button()
-    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
+        
     await update.message.reply_text(f"Домашнє завдання для '{subject}' оновлено!")
     return ConversationHandler.END
 
@@ -563,7 +558,6 @@ async def input_project(update: Update, context: ContextTypes.DEFAULT_TYPE):
     with open("project_and_extracurricular_task.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
     await update.message.reply_text("✅ Створено новий проект!")
     return ConversationHandler.END
 
@@ -592,8 +586,6 @@ async def input_ex_task_content(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def input_ex_task_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
     """Зберігаємо дату і додаємо завдання у JSON"""
     context.user_data["new_ex_task_date"] = update.message.text
 
@@ -611,8 +603,6 @@ async def input_ex_task_date(update: Update, context: ContextTypes.DEFAULT_TYPE)
     with open("project_and_extracurricular_task.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-    kb = back_button()
-    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
     await update.message.reply_text("✅ Позакласне завдання створено!")
     return ConversationHandler.END
 
