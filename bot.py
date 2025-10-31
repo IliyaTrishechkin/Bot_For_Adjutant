@@ -62,10 +62,6 @@ def get_status(uid):
 def back_button():
     return InlineKeyboardMarkup([[InlineKeyboardButton("Назад", callback_data="Student|Back")]])
 
-async def back_button_1():
-    kb = back_button()
-    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
-
 
 async def registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb = [  [InlineKeyboardButton("Учень", callback_data="reg_Student")],
@@ -269,7 +265,8 @@ async def vuvid_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text += f"Урок {lesson['урок']}: {lesson['предмет']}\n"
         text += "\n"
                     
-    await back_button_1(update, context)
+    kb = back_button()
+    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
     await q.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(kb),
@@ -292,7 +289,8 @@ async def a_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text += f"Урок {lesson['предмет']}: {homework}\n"
         text += "\n"
 
-    await back_button_1(update, context)
+    kb = back_button()
+    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
     await q.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(kb),
@@ -317,7 +315,8 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for i, proj in enumerate(projects, start=1):
         text += f"{i}. {proj['зміст']}\n До {proj['дата']}\n\n"
 
-    await back_button_1(update, context)
+    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
+    await q.message.edit_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(kb))
 
 
 async def show_ec(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -337,8 +336,8 @@ async def show_ec(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for i, proj in enumerate(projects, start=1):
         text += f"{i}. {proj['зміст']}\n До {proj['дата']}\n\n"
 
-    await back_button_1(update, context)
-
+    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
+    await q.message.edit_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(kb))
 
 
 
@@ -374,15 +373,14 @@ async def homework_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
         homework = lesson["д/з"] if lesson["д/з"] else "немає"
         text += f"{lesson['предмет']}: {homework}\n"
 
-    await back_button_1(update, context)
+    kb = back_button()
+    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
 
 
 async def homework_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-
     
-
     today_index = datetime.today().weekday()+1  # 0 = понеділок, 4 = п’ятниця
     day_key = day_map.get(today_index)
     
@@ -394,7 +392,8 @@ async def homework_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
         homework = lesson["д/з"] if lesson["д/з"] else "немає"
         text += f"{lesson['предмет']}: {homework}\n"
 
-    await back_button_1(update, context)
+    kb = back_button()
+    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
 
 
 async def project_1(update: Update, context: ContextTypes.DEFAULT_TYPE):
