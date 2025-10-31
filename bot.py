@@ -363,6 +363,8 @@ async def homework_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
 
     today_index = datetime.today().weekday()  # 0 = понеділок, 4 = п’ятниця
+    if today_index >= 4:
+        today_index = 4
     day_key = day_map.get(today_index)
     
     with open("hometask.json", "r", encoding="utf-8") as f:
@@ -382,6 +384,8 @@ async def homework_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     
     today_index = datetime.today().weekday()+1  # 0 = понеділок, 4 = п’ятниця
+    if today_index > 4:
+        today_index = 0
     day_key = day_map.get(today_index)
     
     with open("hometask.json", "r", encoding="utf-8") as f:
