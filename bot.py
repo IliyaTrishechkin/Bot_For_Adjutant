@@ -12,11 +12,11 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Callb
 
 
 load_dotenv(Path(__file__).parent / 'data.env', encoding='UTF-8')
-TOKEN = "8448978111:AAFnd7ISDJRxfhP4uQE7rNdQ3HuDE8GK97I"
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_ID = os.getenv("ADMIN_ID")
 DATA_USER = json.loads((Path(__file__).parent / 'user.json').read_text(encoding='utf-8'))
 REGISTRATION, PASS = range(100, 102)
-HOMEWORK, SUBJECT, INPUT_HOMEWORK = range(3)
+SUBJECT, INPUT_HOMEWORK = range(2)
 INPUT_PROJECT, INPUT_DATE = range(2)
 EX_TASK_CONTENT, EX_TASK_DATE = range(2)
 day_map = {
@@ -192,29 +192,136 @@ async def Clic_Button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         case "Student":
             match arg:
                 case "homework":
-                    await homework(update, context)
+                    kb = [  
+                        [InlineKeyboardButton("Сьогоднішні д/з", callback_data="Student|today_homework")],
+                        [InlineKeyboardButton("Д/з на завтра", callback_data="Student|tomorrow_homework")],
+                        [InlineKeyboardButton("Подивитися все д/з", callback_data="Student|a_homework")],
+                        [InlineKeyboardButton("Назад", callback_data="Student|Back")]
+                    ]
+                    await update.callback_query.message.edit_text(
+                        text="Обери яке домашнє завдання хочеш подивитись",
+                        reply_markup=InlineKeyboardMarkup(kb)
+                    )
+
                 case "project_1":
-                    await project_1(update, context)
+                    kb = [  
+                        [InlineKeyboardButton("Проекти", callback_data="Student|project_call")],
+                        [InlineKeyboardButton("Позакласні завдання", callback_data="Student|extracurricular_tasks")],
+                        [InlineKeyboardButton("Назад", callback_data="Student|Back")]
+                    ]
+                    await update.callback_query.edit_message_text(
+                        text="Обери що саме хочеш подивитись",
+                        reply_markup=InlineKeyboardMarkup(kb)
+                    )
+
                 case "schedule":
-                    await vuvid_schedule(update, context)
+                    with open("schedule.json", "r", encoding="utf-8") as f:
+                        data = json.load(f)          
+                    text = ""
+                    for day, lessons in data.items():
+                        text += f"*{day}:*\n"
+                        for lesson in lessons:
+                            text += f"Урок {lesson['урок']}: {lesson['предмет']}\n"
+                        text += "\n"           
+                    kb = back_button()
+                    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
+                    await q.message.edit_text(
+                        text,
+                        reply_markup=InlineKeyboardMarkup(kb),
+                        parse_mode="Markdown"
+                    )
+
                 case "today_homework":
-                    await homework_today(update, context)
+                    today_index = datetime.today().weekday()  # 0 = понеділок, 4 = п’ятниця
+                    if today_index >= 4:
+                        today_index = 0
+                    day_key = day_map.get(today_index)
+                    with open("hometask.json", "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    text = f"*Домашнє завдання на сьогодні:*\n\n"
+                    for lesson in data[day_key]:
+                        homework = lesson["д/з"] if lesson["д/з"] else "немає"
+                        text += f"{lesson['предмет']}: {homework}\n"
+                    kb = back_button()
+                    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
+
                 case "tomorrow_homework":
-                    await homework_tomorrow(update, context)
+                    today_index = datetime.today().weekday()+1  # 0 = понеділок, 4 = п’ятниця
+                    if today_index > 4:
+                        today_index = 0
+                    day_key = day_map.get(today_index)
+                    with open("hometask.json", "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    text = f"*Домашнє завдання на завтра:*\n\n"
+                    for lesson in data[day_key]:
+                        homework = lesson["д/з"] if lesson["д/з"] else "немає"
+                        text += f"{lesson['предмет']}: {homework}\n"
+                    kb = back_button()
+                    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
+
                 case "a_homework":
-                    await a_homework(update, context)
+                    with open("hometask.json", "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    text = ""
+                    for day, lessons in data.items():
+                        text += f"*{day.capitalize()}:*\n"
+                        for lesson in lessons:
+                            homework = lesson["д/з"] if lesson["д/з"] else "немає"
+                            text += f"Урок {lesson['предмет']}: {homework}\n"
+                        text += "\n"
+                    kb = back_button()
+                    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
+                    await q.message.edit_text(
+                        text,
+                        reply_markup=InlineKeyboardMarkup(kb),
+                        parse_mode="Markdown"
+                    )
+
                 case "project_call":
-                    await show_projects(update, context)
+                    with open("project_and_extracurricular_task.json", "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    projects = data.get("Проекти", [])
+                    if not projects:
+                        await q.message.edit_text("Немає проєктів.")
+                        return
+                    text = "📘 *Список проєктів:*\n\n"
+                    for i, proj in enumerate(projects, start=1):
+                        text += f"{i}. {proj['зміст']}\n До {proj['дата']}\n\n"
+                    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
+                    await q.message.edit_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(kb))
+
                 case "extracurricular_tasks":
-                    await show_ec(update, context)
+                    with open("project_and_extracurricular_task.json", "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    projects = data.get("Позакласні завдання", [])
+                    if not projects:
+                        await q.message.edit_text("Немає завданнь.")
+                        return
+                    text = "📘 *Список завданнь:*\n\n"
+                    for i, proj in enumerate(projects, start=1):
+                        text += f"{i}. {proj['зміст']}\n До {proj['дата']}\n\n"
+                    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
+                    await q.message.edit_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(kb))
+
                 case "Back":
                     await back(update, context)
+
         case "Clerk":
             match arg:
                 case "homework":
-                    return await start_create_homework(update, context)
+                    await get_homework(update, context)
+
                 case "project":
-                    await project(update, context)
+                    kb = [  
+                        [InlineKeyboardButton("Написати завдання з проекту", callback_data="add_project")],
+                        [InlineKeyboardButton("Створити позакласне завдання", callback_data="extracurricular_tasks")],
+                        [InlineKeyboardButton("Назад", callback_data="Student|Back")]
+                    ]
+                    await update.callback_query.edit_message_text(
+                        text="Обери що саме хочеш створити",
+                        reply_markup=InlineKeyboardMarkup(kb)
+                    )
+
         case "Adjutant":
             pass
         case "Teacher":
@@ -251,194 +358,12 @@ async def back (update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def vuvid_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
-    with open("schedule.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-                        
-    text = ""
-    for day, lessons in data.items():
-        text += f"*{day}:*\n"
-        for lesson in lessons:
-            text += f"Урок {lesson['урок']}: {lesson['предмет']}\n"
-        text += "\n"
-                    
-    kb = back_button()
-    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
-    await q.message.edit_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(kb),
-        parse_mode="Markdown"
-    )
-
-
-async def a_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
-    with open("hometask.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    text = ""
-    for day, lessons in data.items():
-        text += f"*{day.capitalize()}:*\n"
-        for lesson in lessons:
-            homework = lesson["д/з"] if lesson["д/з"] else "немає"
-            text += f"Урок {lesson['предмет']}: {homework}\n"
-        text += "\n"
-
-    kb = back_button()
-    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
-    await q.message.edit_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(kb),
-        parse_mode="Markdown"
-    )
-
-
-async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
-    with open("project_and_extracurricular_task.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    projects = data.get("Проекти", [])
-    
-    if not projects:
-        await q.message.edit_text("Немає проєктів.")
-        return
-
-    text = "📘 *Список проєктів:*\n\n"
-    for i, proj in enumerate(projects, start=1):
-        text += f"{i}. {proj['зміст']}\n До {proj['дата']}\n\n"
-
-    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
-    await q.message.edit_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(kb))
-
-
-async def show_ec(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
-    with open("project_and_extracurricular_task.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    projects = data.get("Позакласні завдання", [])
-    
-    if not projects:
-        await q.message.edit_text("Немає завданнь.")
-        return
-
-    text = "📘 *Список завданнь:*\n\n"
-    for i, proj in enumerate(projects, start=1):
-        text += f"{i}. {proj['зміст']}\n До {proj['дата']}\n\n"
-
-    kb = [[InlineKeyboardButton("Назад", callback_data="Student|Back")]]
-    await q.message.edit_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(kb))
-
-
-
-async def homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    kb = [  
-        [InlineKeyboardButton("Сьогоднішні д/з", callback_data="Student|today_homework")],
-        [InlineKeyboardButton("Д/з на завтра", callback_data="Student|tomorrow_homework")],
-        [InlineKeyboardButton("Подивитися все д/з", callback_data="Student|a_homework")],
-        [InlineKeyboardButton("Назад", callback_data="Student|Back")]
-    ]
-    
-    await update.callback_query.message.edit_text(
-        text="Обери яке домашнє завдання хочеш подивитись",
-        reply_markup=InlineKeyboardMarkup(kb)
-    )
-
-    
-async def homework_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
-    # Визначаємо сьогоднішній день у форматі JSON
-    
-
-    today_index = datetime.today().weekday()  # 0 = понеділок, 4 = п’ятниця
-    if today_index >= 4:
-        today_index = 0
-    day_key = day_map.get(today_index)
-    
-    with open("hometask.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    text = f"*Домашнє завдання на сьогодні:*\n\n"
-    for lesson in data[day_key]:
-        homework = lesson["д/з"] if lesson["д/з"] else "немає"
-        text += f"{lesson['предмет']}: {homework}\n"
-
-    kb = back_button()
-    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
-
-
-async def homework_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    
-    today_index = datetime.today().weekday()+1  # 0 = понеділок, 4 = п’ятниця
-    if today_index > 4:
-        today_index = 0
-    day_key = day_map.get(today_index)
-    
-    with open("hometask.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    text = f"*Домашнє завдання на завтра:*\n\n"
-    for lesson in data[day_key]:
-        homework = lesson["д/з"] if lesson["д/з"] else "немає"
-        text += f"{lesson['предмет']}: {homework}\n"
-
-    kb = back_button()
-    await q.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
-
-
-async def project_1(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    kb = [  
-        [InlineKeyboardButton("Проекти", callback_data="Student|project_call")],
-        [InlineKeyboardButton("Позакласні завдання", callback_data="Student|extracurricular_tasks")],
-        [InlineKeyboardButton("Назад", callback_data="Student|Back")]
-    ]
-    
-    await update.callback_query.edit_message_text(
-        text="Обери що саме хочеш подивитись",
-        reply_markup=InlineKeyboardMarkup(kb)
-    )
-
-
-async def project(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    kb = [  
-        [InlineKeyboardButton("Написати завдання з проекту", callback_data="add_project")],
-        [InlineKeyboardButton("Створити позакласне завдання", callback_data="extracurricular_tasks")],
-        [InlineKeyboardButton("Назад", callback_data="Student|Back")]
-    ]
-    
-    await update.callback_query.edit_message_text(
-        text="Обери що саме хочеш створити",
-        reply_markup=InlineKeyboardMarkup(kb)
-    )
-
-
                  #### HOMEWORK #######
 
 
-async def start_create_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def get_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    await q.message.reply_text("Введіть домашнє завдання, яке хочете додати:")
-    return HOMEWORK
-
-
-async def get_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["new_homework"] = update.message.text
-
     kb = [
         [InlineKeyboardButton("Понеділок", callback_data="Clerk|monday")],
         [InlineKeyboardButton("Вівторок", callback_data="Clerk|tuesday")],
@@ -446,7 +371,7 @@ async def get_homework(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Четвер", callback_data="Clerk|thursday")],
         [InlineKeyboardButton("П'ятниця", callback_data="Clerk|friday")]
     ]
-    await update.message.reply_text(
+    await q.message.reply_text(
         "Оберіть день:",
         reply_markup=InlineKeyboardMarkup(kb)
     )
@@ -457,7 +382,6 @@ async def create_homework_2(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     
-    # Ключі точно як у JSON
     day_map = {
         "Clerk|monday": "monday",
         "Clerk|tuesday": "tuesday",
@@ -466,15 +390,14 @@ async def create_homework_2(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Clerk|friday": "friday"
     }
     
-    day = day_map[q.data]  # англійський ключ
+    day = day_map[q.data]  
     context.user_data["day"] = day
 
     with open("hometask.json", "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    lessons_list = data[day]  # отримуємо уроки
+    lessons_list = data[day] 
 
-    # клавіатура предметів
     ckb = [[InlineKeyboardButton(lesson["предмет"], callback_data=f"homework3_{lesson['предмет']}")] for lesson in lessons_list]
 
     await q.message.edit_text(
@@ -524,11 +447,11 @@ async def get_project(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     await q.message.reply_text("Напишіть завдання яке хочете додати:")
-    return INPUT_PROJECT  # чекаємо текст
+    return INPUT_PROJECT 
 
 
 async def create_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # зберігаємо текст завдання
+   
     context.user_data["new_project"] = update.message.text
     await update.message.reply_text("Напишіть дату до якої треба здати проект:")
     return INPUT_DATE
@@ -556,12 +479,9 @@ async def input_project(update: Update, context: ContextTypes.DEFAULT_TYPE):
           #### ПОЗАКЛАСНІ ЗАВДАННЯ ####
 
 
-
 async def get_extracurricular_task(update: Update, context: ContextTypes.DEFAULT_TYPE):  
     q = update.callback_query
     await q.answer()
-
-    """Початок конверсейшена: користувач вводить зміст завдання"""
     q = update.callback_query
     await q.answer()
     await q.message.reply_text("Напишіть зміст позакласного завдання:")
@@ -576,20 +496,16 @@ async def input_ex_task_content(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def input_ex_task_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Зберігаємо дату і додаємо завдання у JSON"""
     context.user_data["new_ex_task_date"] = update.message.text
 
-    # Читаємо JSON
     with open("project_and_extracurricular_task.json", "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # Додаємо нове позакласне завдання
     data["Позакласні завдання"].append({
         "зміст": context.user_data["new_ex_task"],
         "дата": context.user_data["new_ex_task_date"]
     })
 
-    # Записуємо назад у файл
     with open("project_and_extracurricular_task.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -600,14 +516,13 @@ async def input_ex_task_date(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(str(TOKEN)).build()
 
     IS_password()
 
     conv_homework = ConversationHandler(
-        entry_points=[CallbackQueryHandler(start_create_homework, pattern="^Clerk\\|homework$")],
+        entry_points=[CallbackQueryHandler(get_homework, pattern="^Clerk\\|homework$")],
         states={
-            HOMEWORK: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_homework)],
             SUBJECT: [CallbackQueryHandler(create_homework_2, pattern="^Clerk\\|")],
             INPUT_HOMEWORK: [MessageHandler(filters.TEXT & ~filters.COMMAND, input_homework)]
         },
