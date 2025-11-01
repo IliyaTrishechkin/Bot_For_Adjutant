@@ -1,8 +1,8 @@
 {
     "PASSWORD": {
         "Teacher": "nXvxz5F2t5^Y",
-        "Adjutant": "%C9vLv!bcIPS",
-        "Clerk": "GdcV5rkUY6U1"
+        "Adjutant": "iSlZUFP7Un0#",
+        "Clerk": "QjGh0kq%vspD"
     },
     "Users": {
         "Student": [
@@ -14,10 +14,8 @@
             "0000000000"
         ],
         "Adjutant": [
-            null
+            "5454543144"
         ],
-        "Clerk": [
-            "1229185667"
-        ]
+        "Clerk": null
     }
 }
